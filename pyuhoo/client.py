@@ -11,13 +11,16 @@ from .consts import APP_VERSION
 from .device import Device
 from .util import encrypted_hash, json_pp, salted_hash
 
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 
 class Client(object):
     def __init__(
         self, username: str, password: str, websession: ClientSession, **kwargs
     ) -> None:
         self._log: logging.Logger = logging.getLogger("pyuhoo")
-
+        
         if kwargs.get("debug") is True:
             self._log.setLevel(logging.DEBUG)
             self._log.debug("Debug mode is explicitly enabled.")
@@ -68,6 +71,7 @@ class Client(object):
         self._device_id = user_login["deviceId"]
         self._token = user_login["token"]
         self._refresh_token = user_login["refreshToken"]
+        _LOGGER.error(f"token: {self._token}, refresh_token: {self._refresh_token}")
         self._api.set_bearer_token(self._refresh_token)
 
     async def refresh_token(self) -> None:

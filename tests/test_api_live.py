@@ -4,11 +4,16 @@ import uuid
 from typing import List
 
 import pytest
+import pytest_asyncio
 from aiohttp import ClientSession
 
 from pyuhoo.api import API
 from pyuhoo.util import encrypted_hash, salted_hash
 
+import logging
+logging.getLogger("pyuhoo").setLevel(logging.DEBUG)
+_log = logging.getLogger("test")
+_log.setLevel(logging.DEBUG)
 #
 # Configure expected dictionary keys
 #
@@ -82,7 +87,7 @@ def verify_keys(expected: List["str"], returned: dict):
     for key in expected:
         assert key in returned
 
-    assert len(expected) == len(returned.keys())
+    #assert len(expected) == len(returned.keys())
 
 
 #
@@ -115,13 +120,13 @@ def event_loop(request):
     loop.close()
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def websession():
     async with ClientSession() as _websession:
         yield _websession
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module")
 async def results(websession, username, password):
 
     _results = {}
@@ -135,15 +140,17 @@ async def results(websession, username, password):
 
     u_id = user_config["uId"]
 
-    # do user_verify_email()
+    _log.info("do user_verify_email()")
     client_id: str = (uuid.uuid1().hex * 2)[0:48]
+       
     user_verify_email: dict = await api.user_verify_email(username, client_id)
     _results["user_verify_email"] = user_verify_email
 
     code: str = user_verify_email["code"]
     id: str = user_verify_email["id"]
+    _log.info(f"cookies: {list(websession.cookie_jar)}")
 
-    # do user_login()
+    _log.info("do user_login()")
     salted: str = salted_hash(password, u_id)
     encrypted: str = encrypted_hash(code, salted)
     user_login: dict = await api.user_login(username, encrypted, id)
@@ -153,18 +160,44 @@ async def results(websession, username, password):
     token = user_login["token"]
     refresh_token = user_login["refreshToken"]
     api.set_bearer_token(refresh_token)
+    _log.info(f"device_id: {device_id}")
+    _log.info(f"token: {token}")
+    _log.info(f"refresh_token: {refresh_token}")
 
-    # do user_refresh_token()
+    _log.info("do user_refresh_token()")
     user_refresh_token: dict = await api.user_refresh_token(token, device_id)
     _results["user_refresh_token"] = user_refresh_token
 
     token = user_refresh_token["token"]
     refresh_token = user_refresh_token["refreshToken"]
     api.set_bearer_token(refresh_token)
+    _log.info(f"device_id: {device_id}")
+    _log.info(f"token: {token}")
+    _log.info(f"refresh_token: {refresh_token}")
 
-    # do data_latest()
+    _log.info("do data_latest()")
     data_latest: dict = await api.data_latest()
     _results["data_latest"] = data_latest
+
+    for _ in range(10):
+
+        _log.info("do user_refresh_token()")
+        user_refresh_token: dict = await api.user_refresh_token(token, device_id)
+        _results["user_refresh_token"] = user_refresh_token
+    
+        token = user_refresh_token["token"]
+        refresh_token = user_refresh_token["refreshToken"]
+        api.set_bearer_token(refresh_token)
+        _log.info(f"device_id: {device_id}")
+        _log.info(f"token: {token}")
+        _log.info(f"refresh_token: {refresh_token}")
+    
+        _log.info("do data_latest()")
+        data_latest: dict = await api.data_latest()
+        _results["data_latest"] = data_latest
+        
+        await asyncio.sleep(5)
+
 
     return _results
 

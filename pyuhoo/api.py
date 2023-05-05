@@ -52,20 +52,22 @@ class API(object):
             headers.update({USER_AGENT: self._user_agent})
 
         self._log.debug(f"[_request] {method} {scaffold}/{endpoint}")
-
+        self._log.debug(f"[_request] headers: {headers}")
         if method.lower() == "post":
-            self._log.debug(f"[_request] {json_pp(data)}")
+            self._log.debug(f"[_request] data: {json_pp(data)}")
 
         async with self._websession.request(
             method, f"{scaffold}/{endpoint}", headers=headers, data=data
         ) as resp:
             try:
                 self._log.debug(
-                    f"[_request] {resp.status} {method} {scaffold}/{endpoint}"
+                    f"[_resp] {resp.status} {method} {scaffold}/{endpoint}"
                 )
+                self._log.debug(f"[_resp] headers: {resp.headers}")
 
                 if resp.content_type == "application/json":
                     json = await resp.json()
+                    self._log.debug(f"[_resp] content: {json}")
                 else:
                     text = await resp.text()
 
