@@ -4,7 +4,7 @@ from typing import Dict, Optional
 
 from aiohttp import ClientSession
 
-from pyuhoo.errors import ForbiddenError, UhooError, UnauthorizedError
+from .errors import ForbiddenError, UhooError, UnauthorizedError
 
 from .api import API
 from .consts import APP_VERSION
